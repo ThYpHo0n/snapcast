@@ -22,4 +22,5 @@ before_install:
     - eval "${MATRIX_EVAL}"
 script:
   - make
-  - cd client && make installserver
+  - make installclient
+  - make installserver
