@@ -23,7 +23,7 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make BUILD_PARAMS="TARGET=MACOS"          ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then BUILD_PARAMS="TARGET=MACOS"          ; fi
   - make $BUILD_PARAMS
   - sudo make installclient $BUILD_PARAMS
   - sudo make installserver $BUILD_PARAMS
