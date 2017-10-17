@@ -1,6 +1,5 @@
 language: cpp
 env:
-- TEST_SUITE=integration_tests
 - TEST_SUITE=unit_tests
 compiler:
   - gcc
@@ -15,8 +14,6 @@ matrix:
     - os: linux
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
             - g++-7 build-essential libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
       env:
