@@ -6,16 +6,16 @@ compiler:
 matrix:
   include:
     # build on osx
-    - os: osx
-      osx_image: xcode8
-      env:
-        - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
+#    - os: osx
+#      osx_image: xcode8
+#      env:
+#        - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
     # build on ubuntu
     - os: linux
       addons:
         apt:
           packages:
-            - g++-7 build-essential libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
+            - build-essential libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 before_install:
