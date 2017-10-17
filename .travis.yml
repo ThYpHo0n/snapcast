@@ -1,15 +1,10 @@
 language: cpp
 env:
-- TEST_SUITE=unit_tests
+  - TEST_SUITE=unit_tests
 compiler:
   - gcc
 matrix:
   include:
-    # build on osx
-    - os: osx
-      osx_image: xcode8
-      env:
-        - MATRIX_EVAL="brew update && brew install gcc && CC=gcc-7 && CXX=g++-7"
     # build on ubuntu
     - os: linux
       sudo: required
@@ -19,9 +14,16 @@ matrix:
             - build-essential libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    # build on osx
+    - os: osx
+      env:
+        - MATRIX_EVAL="brew update && brew install gcc && CC=gcc-7 && CXX=g++-7"
+  allow_failures:
+    - os: osx
 before_install:
     - eval "${MATRIX_EVAL}"
 script:
-  - make
-  - sudo make installclient
-  - sudo make installserver
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make BUILD_PARAMS="TARGET=MACOS"          ; fi
+  - make $BUILD_PARAMS
+  - sudo make installclient $BUILD_PARAMS
+  - sudo make installserver $BUILD_PARAMS
