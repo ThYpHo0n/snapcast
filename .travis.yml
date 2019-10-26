@@ -2,9 +2,6 @@ language: cpp
 dist: trusty
 sudo: required
 group: edge
-arch:
-  - amd64
-  - arm64
 
 matrix:
   include:
@@ -80,6 +77,18 @@ matrix:
           packages:
             - g++-9 boost1.70 libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
 
+    - os: linux
+      arch: arm64
+      compiler: gcc
+      env:
+        - COMPILER=g++-9
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:mhier/libboost-latest'
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9 boost1.70 libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
 
     - os: linux
       compiler: clang
@@ -124,6 +133,21 @@ matrix:
             - clang-5.0 boost1.70 libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
 
     - os: linux
+      compiler: clang
+      env:
+        - COMPILER=clang++-6.0
+        - CXXFLAGS=-stdlib=libc++
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:mhier/libboost-latest'
+            - llvm-toolchain-trusty-6.0
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-6.0 boost1.70 libasound2-dev libvorbisidec-dev libvorbis-dev libflac-dev alsa-utils libavahi-client-dev avahi-daemon
+
+    - os: linux
+      arch: arm64
       compiler: clang
       env:
         - COMPILER=clang++-6.0
