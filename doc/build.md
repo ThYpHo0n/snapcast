@@ -35,7 +35,12 @@ Compilation requires gcc 4.8 or higher, so it's highly recommended to use Debian
 For Arch derivates:
 
     $ sudo pacman -S base-devel
-    $ sudo pacman -S alsa-lib avahi libvorbis flac alsa-utils
+    $ sudo pacman -S alsa-lib avahi libvorbis flac alsa-utils boost
+
+For Fedora (and probably RHEL, CentOS & Scientific Linux, but untested):
+
+    $ sudo dnf install @development-tools
+    $ sudo dnf install alsa-lib-devel avahi-devel libvorbis-devel flac-devel libstdc++-static
 
 ### Build Snapclient and Snapserver
 `cd` into the Snapcast src-root directory:
@@ -74,6 +79,13 @@ Install Snapserver
 
 This will copy the server binary to `/usr/bin` and update init.d/systemd to start the server as a daemon.
 
+### Debian packages
+
+Debian packages can be made with
+
+    $ sudo apt-get install debhelper
+    $ cd <snapcast dir>
+    $ fakeroot make -f debian/rules binary
 
 ## FreeBSD (Native)
 Install the build tools and required libs:  
@@ -90,7 +102,7 @@ Install Snapserver
 
     $ sudo gmake TARGET=FREEBSD install
 
-This will copy the server binary to `/usr/local/bin` and the startup script to `/usr/local/etc/rc.d/snapserver`. To enable the Snapserver, add this line to `/etc/rc.conf`: 
+This will copy the server binary to `/usr/local/bin` and the startup script to `/usr/local/etc/rc.d/snapserver`. To enable the Snapserver, add this line to `/etc/rc.conf`:  
 
     snapserver_enable="YES"
 
@@ -100,6 +112,53 @@ For additional command line arguments, add in `/etc/rc.conf`:
 
 Start and stop the server with `sudo service snapserver start` and `sudo service snapserver stop`.
 
+
+## Gentoo (native)
+
+Snapcast is available under Gentoo's [Portage](https://wiki.gentoo.org/wiki/Portage) package management system.  Portage utilises `USE` flags to determine what components are built on compilation.  The availabe options are...
+
+    equery u snapcast
+    [ Legend : U - final flag setting for installation]
+    [        : I - package is installed with flag     ]
+    [ Colors : set, unset                             ]
+     * Found these USE flags for media-sound/snapcast-9999:
+     U I
+     + - avahi       : Build with avahi support
+     + + client      : Build and install Snapcast client component
+     + - flac        : Build with FLAC compression support
+     + + server      : Build and install Snapcast server component
+     - - static-libs : Build static libs
+     - - tremor      : Build with TREMOR version of vorbis
+     + - vorbis      : Build with libvorbis support
+
+
+These can be set either in the [global configuration](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE) file `/etc/portage/make.conf` or on a per-package basis (as root):
+
+    if [ ! -d "$DIRECTORY" ]; then
+      mkdir /etc/portage/package.use/media-sound
+    fi
+    echo 'media-sound/snapcast client server flac
+
+If for example you only wish to build the server and *not* the client then preceed the server `USE` flag with `-` i.e.
+
+    echo 'media-sound/snapcast client -server
+
+Once `USE` flags are configured emerge snapcast as root:
+
+    $ emerge -av snapcast
+
+
+Starting the client or server depends on whether you are using `systemd` or `openrc`.  To start using `openrc`:
+
+    /etc/init.d/snapclient start
+    /etc/init.d/snapserver start
+
+To enable the serve and client to start under the default run-level:
+
+    rc-update add snapserver default
+    rc-update add snapclient default
+
+
 ## macOS (Native)
 
 *Warning: macOS support is experimental*
@@ -108,7 +167,7 @@ Start and stop the server with `sudo service snapserver start` and `sudo service
  2. Install [Homebrew](http://brew.sh)
  3. Install the required libs
 
-```    
+```   
 $ brew install flac libvorbis
 ```
 
@@ -137,19 +196,18 @@ Install Snapserver
 This will copy the server binary to `/usr/local/bin` and create a Launch Agent to start the server as a daemon.
 
 ## Android (Cross compile)
-Cross compilation for Android is done with the [Android NDK](http://developer.android.com/tools/sdk/ndk/index.html) on a Linux host machine.  
+Cross compilation for Android is done with the [Android NDK](http://developer.android.com/tools/sdk/ndk/index.html) on a Linux host machine. 
 
 ### Android NDK setup
 http://developer.android.com/ndk/guides/standalone_toolchain.html
- 1. Download NDK: `https://dl.google.com/android/repository/android-ndk-r16-beta1-linux-x86_64.zip`
- 2. Extract to: `/SOME/LOCAL/PATH/android-ndk-r16-beta1`
- 3. Setup toolchains for arm, mips and x86 somewhere in your home dir (`<android-ndk dir>`):
+ 1. Download NDK: `https://dl.google.com/android/repository/android-ndk-r17b-linux-x86_64.zip`
+ 2. Extract to: `/SOME/LOCAL/PATH/android-ndk-r17b`
+ 3. Setup toolchains for arm and x86 somewhere in your home dir (`<android-ndk dir>`):
 
 ```
-$ cd /SOME/LOCAL/PATH/android-ndk-r16-beta1/build/tools
-$ ./make_standalone_toolchain.py --arch arm --api 14 --install-dir <android-ndk dir>-arm
-$ ./make_standalone_toolchain.py --arch mips --api 14 --install-dir <android-ndk dir>-mips
-$ ./make_standalone_toolchain.py --arch x86 --api 14 --install-dir <android-ndk dir>-x86
+$ cd /SOME/LOCAL/PATH/android-ndk-r17/build/tools
+$ ./make_standalone_toolchain.py --arch arm --api 16 --stl libc++ --install-dir <android-ndk dir>-arm
+$ ./make_standalone_toolchain.py --arch x86 --api 16 --stl libc++ --install-dir <android-ndk dir>-x86
 ```
 
 ### Build Snapclient
@@ -157,27 +215,33 @@ Cross compile and install FLAC, ogg, and tremor (only needed once):
 
     $ cd <snapcast dir>/externals
     $ make NDK_DIR=<android-ndk dir>-arm ARCH=arm
-    $ make NDK_DIR=<android-ndk dir>-mips ARCH=mips
     $ make NDK_DIR=<android-ndk dir>-x86 ARCH=x86
-   
+  
 Compile the Snapclient:
 
     $ cd <snapcast dir>/client
-    $ ./build_android_all.sh <android-ndk dir>
+    $ ./build_android_all.sh <android-ndk dir> <snapdroid assets dir>
 
-The binaries for `armeabi` and `mips` and `x86` will be copied into the Android's assets directory (`<snapcast dir>/android/Snapcast/src/main/assets/bin/`) and so will be bundled with the Snapcast App.
+The binaries for `armeabi` and `x86` will be copied into the Android's assets directory (`<snapdroid assets dir>/bin/`) and so will be bundled with the Snapcast App.
 
 
 ## OpenWrt/LEDE (Cross compile)
-Cross compilation for OpenWrt is done with the [OpenWrt build system](https://wiki.openwrt.org/about/toolchain) on a Linux host machine.  
+Cross compilation for OpenWrt is done with the [OpenWrt build system](https://wiki.openwrt.org/about/toolchain) on a Linux host machine:  
 https://wiki.openwrt.org/doc/howto/build
 
-### OpenWrt build system setup
+For LEDE:
+https://lede-project.org/docs/guide-developer/quickstart-build-images
+
+### OpenWrt/LEDE build system setup
 https://wiki.openwrt.org/doc/howto/buildroot.exigence
 
 Clone OpenWrt to some place in your home directory (`<buildroot dir>`)
 
     $ git clone git://git.openwrt.org/15.05/openwrt.git
+  
+...LEDE
+
+    $ git clone https://git.lede-project.org/source.git
 
 Download and install available feeds
 
@@ -185,31 +249,27 @@ Download and install available feeds
     $ ./scripts/feeds update -a
     $ ./scripts/feeds install -a
 
-Build
-
-    $ make menuconfig
-    $ make
-
-Within the OpenWrt directory create symbolic links to the Snapcast source directory and to the OpenWrt Makefile:
+Within the `<buildroot dir>` directory create symbolic links to the Snapcast source directory `<snapcast source>` and to the OpenWrt Makefile:
 
     $ mkdir -p <buildroot dir>/package/sxx/snapcast
     $ cd <buildroot dir>/package/sxx/snapcast
-    $ git clone https://github.com/badaix/snapcast.git
-    $ mv snapcast src
-    $ ln -s src/openWrt/Makefile.openwrt Makefile
-    $ cd src/externals
-    $ git submodule update --init --recursive
+    $ ln -s <snapcast source> src
+    $ ln -s <snapcast source>/openWrt/Makefile.openwrt Makefile
+
+Build  
+in menuconfig in `sxx/snapcast` select `Compile snapserver` and/or `Compile snapclient`
+
     $ cd <buildroot dir>
+    $ make defconfig
     $ make menuconfig
+    $ make
 
-in menuconfig select the snapcast package to be installed
-
-Build Snapcast:
+Rebuild Snapcast:
 
     $ make package/sxx/snapcast/clean
     $ make package/sxx/snapcast/compile
 
-The packaged `ipk` files are in `<buildroot dir>/bin/ar71xx/packages/base/snap[client|server]_x.x.x_ar71xx.ipk`
+The packaged `ipk` files are for OpenWrt in `<buildroot dir>/bin/ar71xx/packages/base/snap[client|server]_x.x.x_ar71xx.ipk` and for LEDE `<buildroot dir>/bin/packages/mips_24kc/base/snap[client|server]_x.x.x_mips_24kc.ipk`
 
 ## Buildroot (Cross compile)
 This example will show you how to add snapcast to [Buildroot](https://buildroot.org/).

@@ -1,5 +1,5 @@
 #    This file is part of snapcast
-#   Copyright (C) 2014-2017  Johannes Pohl
+#   Copyright (C) 2014-2019  Johannes Pohl
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = 0.12.0
+VERSION = 0.16.0
 BIN = snapclient
 
 ifeq ($(TARGET), FREEBSD)
@@ -30,10 +30,13 @@ else
   TARGET_DIR ?= /usr
 endif
 
+# Simplify building debuggable executables 'make DEBUG=-g STRIP=echo'
+DEBUG=-O3
 
-CXXFLAGS += $(ADD_CFLAGS) -std=c++0x -Wall -Wno-unused-function -O3 -DASIO_STANDALONE -DVERSION=\"$(VERSION)\" -I. -I.. -isystem ../externals/asio/asio/include -I../externals/popl/include -I../externals/aixlog/include
-LDFLAGS   = -logg -lFLAC
-OBJ       = snapClient.o stream.o clientConnection.o timeProvider.o player/player.o decoder/pcmDecoder.o decoder/oggDecoder.o decoder/flacDecoder.o controller.o ../message/pcmChunk.o ../common/sampleFormat.o
+
+CXXFLAGS += $(ADD_CFLAGS) -std=c++0x -Wall -Wextra -Wpedantic -Wno-unused-function $(DEBUG) -DBOOST_ERROR_CODE_HEADER_ONLY -DHAS_FLAC -DHAS_OGG -DVERSION=\"$(VERSION)\" -I. -I.. -I../common
+LDFLAGS  += $(ADD_LDFLAGS) -logg -lFLAC
+OBJ       = snapclient.o stream.o client_connection.o time_provider.o player/player.o decoder/pcm_decoder.o decoder/ogg_decoder.o decoder/flac_decoder.o controller.o ../common/sample_format.o
 
 
 ifneq (,$(TARGET))
@@ -48,38 +51,38 @@ ifeq ($(TARGET), ANDROID)
 
 CXX       = $(PROGRAM_PREFIX)clang++
 STRIP     = $(PROGRAM_PREFIX)strip
-CXXFLAGS += -pthread -DNO_CPP11_STRING -fPIC -DHAS_TREMOR -DHAS_OPENSL -I$(NDK_DIR)/include
-LDFLAGS   = -L$(NDK_DIR)/lib -pie -lvorbisidec -logg -lFLAC -lOpenSLES -latomic -llog
-OBJ      += player/openslPlayer.o 
+CXXFLAGS += -pthread -fPIC -DHAS_TREMOR -DHAS_OPENSL -I$(NDK_DIR)/include
+LDFLAGS   = -L$(NDK_DIR)/lib -pie -lvorbisidec -logg -lFLAC -lOpenSLES -latomic -llog -static-libstdc++
+OBJ      += player/opensl_player.o 
 
 else ifeq ($(TARGET), OPENWRT)
 
 STRIP     = echo
 CXXFLAGS += -pthread -DNO_CPP11_STRING -DHAS_TREMOR -DHAS_ALSA -DHAS_AVAHI -DHAS_DAEMON
 LDFLAGS  += -lasound -lvorbisidec -lavahi-client -lavahi-common -latomic
-OBJ      += ../common/daemon.o player/alsaPlayer.o browseZeroConf/browseAvahi.o
+OBJ      += ../common/daemon.o player/alsa_player.o browseZeroConf/browse_avahi.o
 
 else ifeq ($(TARGET), BUILDROOT)
 
 CXXFLAGS += -pthread -DNO_CPP11_STRING -DHAS_TREMOR -DHAS_ALSA -DHAS_AVAHI -DHAS_DAEMON
 LDFLAGS  += -lasound -lvorbisidec -lavahi-client -lavahi-common -latomic
-OBJ      += ../common/daemon.o player/alsaPlayer.o browseZeroConf/browseAvahi.o
+OBJ      += ../common/daemon.o player/alsa_player.o browseZeroConf/browse_avahi.o
 
 else ifeq ($(TARGET), MACOS)
 
 CXX       = g++
 STRIP     = strip
-CXXFLAGS += -DHAS_OGG -DHAS_COREAUDIO -DFREEBSD -DHAS_BONJOUR -DHAS_DAEMON -I/usr/local/include -Wno-unused-local-typedef -Wno-deprecated
-LDFLAGS  += -lvorbis -lFLAC -L/usr/local/lib -framework AudioToolbox -framework CoreFoundation -framework IOKit
-OBJ      += ../common/daemon.o player/coreAudioPlayer.o browseZeroConf/browseBonjour.o
+CXXFLAGS += -DHAS_COREAUDIO -DHAS_VORBIS -DFREEBSD -DHAS_BONJOUR -DHAS_DAEMON -I/usr/local/include -Wno-unused-local-typedef -Wno-deprecated
+LDFLAGS  += -lvorbis -lFLAC -L/usr/local/lib -framework AudioToolbox -framework CoreAudio -framework CoreFoundation -framework IOKit
+OBJ      += ../common/daemon.o player/coreaudio_player.o browseZeroConf/browse_bonjour.o
 
 else
 
 CXX       = g++
 STRIP     = strip
-CXXFLAGS += -pthread -DHAS_OGG -DHAS_ALSA -DHAS_AVAHI -DHAS_DAEMON
-LDFLAGS  += -lrt -lasound -lvorbis -lavahi-client -lavahi-common -static-libgcc -static-libstdc++ -latomic
-OBJ      += ../common/daemon.o player/alsaPlayer.o browseZeroConf/browseAvahi.o
+CXXFLAGS += -pthread -DHAS_VORBIS -DHAS_ALSA -DHAS_AVAHI -DHAS_DAEMON
+LDFLAGS  += -lrt -lasound -lvorbis -lavahi-client -lavahi-common -latomic
+OBJ      += ../common/daemon.o player/alsa_player.o browseZeroConf/browse_avahi.o
 
 endif
 
@@ -114,12 +117,6 @@ $(BIN): $(OBJ)
 
 clean:
 	rm -rf $(BIN) $(OBJ) *~ player/*.o
-
-.PHONY: dpkg
-#sudo apt-get install build-essential debhelper dh-make dh-systemd quilt fakeroot lintian
-dpkg:
-	dpkg-buildpackage -rfakeroot -b -uc -us
-	dh_clean
 
 ifdef DESTDIR
 
